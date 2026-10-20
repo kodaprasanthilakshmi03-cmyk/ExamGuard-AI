@@ -3,28 +3,23 @@ import cv2
 import base64
 import numpy as np
 from datetime import datetime
-from insightface.app import FaceAnalysis
+from modules.face_verification import _get_face_app
 
 
 # -------------------------------------------------
-# Load InsightFace Model (only once)
+# InsightFace model is lazy-loaded (shared, cached)
+# on first use via _get_face_app(); nothing is
+# loaded at import time.
 # -------------------------------------------------
-
-app = FaceAnalysis(name="buffalo_l")
-
-app.prepare(
-    ctx_id=0
-    if cv2.cuda.getCudaEnabledDeviceCount() > 0
-    else -1
-)
 
 SIMILARITY_THRESHOLD = 0.60
 
 
 class FaceMonitor:
 
-    def __init__(self):
-        self.app = app
+    @property
+    def app(self):
+        return _get_face_app()
 
     # -------------------------------------------------
     # Load Registration Image
