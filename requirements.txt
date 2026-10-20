@@ -1,5 +1,6 @@
 Flask>=3.0.0
 gunicorn
+# headless OpenCV only; do not add opencv-python (GUI build, needs libxcb)
 opencv-python-headless>=4.10.0
 numpy>=1.26.0
 Faker>=26.0.0
