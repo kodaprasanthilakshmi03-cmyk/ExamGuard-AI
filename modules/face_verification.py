@@ -1,19 +1,48 @@
 import os
 import cv2
 import base64
+import threading
 import numpy as np
-from insightface.app import FaceAnalysis
 
 
 # ---------------------------------------------------------
-# Initialize InsightFace only once
+# Lazily initialize InsightFace (once per process)
+#
+# The model is NOT created at import time so that the web
+# process stays small enough to boot. It is loaded on first
+# use and then cached for the lifetime of the process.
 # ---------------------------------------------------------
 
-app = FaceAnalysis(name="buffalo_l")
+_face_app = None
+_face_app_lock = threading.Lock()
 
-app.prepare(
-    ctx_id=0 if cv2.cuda.getCudaEnabledDeviceCount() > 0 else -1
-)
+
+def _get_face_app():
+
+    global _face_app
+
+    if _face_app is None:
+
+        with _face_app_lock:
+
+            if _face_app is None:
+
+                from insightface.app import FaceAnalysis
+
+                model = FaceAnalysis(name="buffalo_l")
+
+                ctx = (
+                    0
+                    if hasattr(cv2, "cuda")
+                    and cv2.cuda.getCudaEnabledDeviceCount() > 0
+                    else -1
+                )
+
+                model.prepare(ctx_id=ctx)
+
+                _face_app = model
+
+    return _face_app
 
 
 # ---------------------------------------------------------
@@ -30,7 +59,7 @@ SIMILARITY_THRESHOLD = 0.60
 class FaceVerifier:
 
     def __init__(self):
-        self.app = app
+        pass
 
     # -----------------------------------------------------
     # Load Registration Image
@@ -84,7 +113,7 @@ class FaceVerifier:
 
         try:
 
-            faces = self.app.get(image)
+            faces = _get_face_app().get(image)
 
         except Exception as e:
 
